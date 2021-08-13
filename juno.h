@@ -21,7 +21,7 @@ class Bezier
 {
 public:
     Bezier() = default;
-    Bezier(double x1, y1, x2, y2);
+    Bezier(double x1, double y1, double x2, double y2);
 
     double solve(double progress) const;
 
@@ -134,7 +134,7 @@ public:
         std::get<2>(m_frames.front()) = easing;
     }
 
-    Animate<T>& addKeyFrameAt(double step, const KeyValue& value, const Bezier& easing = EaseLinear)
+    Animate<T>& addKeyFrameAt(double step, const KeyValue& value, const Bezier& easing = Bezier::Linear)
     {
         if(step > 1.0) step = 1.0;
         if(step < 0.0) step = 0.0;
@@ -193,7 +193,7 @@ public:
         return blend<T>(fromValue, toValue, easing.solve(effectivePercent));
     }
 
-    Animate<T>& reset(const KeyValue& from = KeyValue{}, const KeyValue& to = KeyValue{}, const Bezier& easing = EaseLinear)
+    Animate<T>& reset(const KeyValue& from = KeyValue{}, const KeyValue& to = KeyValue{}, const Bezier& easing = Bezier::Linear)
     {
         *this = Animate<T>(from, to, easing);
         return *this;
@@ -207,3 +207,5 @@ public:
 private:
     KeyFrames m_frames;
 };
+
+} // namespace juno
