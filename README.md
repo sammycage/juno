@@ -1,5 +1,6 @@
-# juno
-juno is a basic animation library in c++ based on [Webs Animations](https://drafts.csswg.org/web-Animations)
+# Juno - Basic animation library in c++
+
+Juno is a basic animation library in c++ based on [Webs Animations](https://drafts.csswg.org/web-Animations)
 
 ## Basic Usage
 
