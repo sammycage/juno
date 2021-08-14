@@ -5,12 +5,6 @@
 
 namespace juno {
 
-const Bezier Bezier::Linear{0, 0, 1, 1};
-const Bezier Bezier::Ease{0, 0, 1, 1};
-const Bezier Bezier::EaseIn{0, 0, 1, 1};
-const Bezier Bezier::EaseOut{0, 0, 1, 1};
-const Bezier Bezier::EaseInOut{0, 0, 1, 1};
-
 double seconds(double value)
 {
     return (value * 1000.0);
@@ -31,7 +25,7 @@ static inline double now()
     return 0;
 }
 
-Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, const Bezier& easing)
+Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, const TimingFunction& timing)
     : m_duration(duration),
       m_delay(delay),
       m_iterationCount(iteration),
@@ -39,7 +33,7 @@ Animation::Animation(double duration, double delay, double iteration, Direction 
       m_playbackRate(1),
       m_playbackDirection(direction),
       m_fillMode(fill),
-      m_easingCurve(easing),
+      m_timingFunction(timing),
       m_startTime(now()),
       m_lastTime(now()),
       m_pauseTime(0),
