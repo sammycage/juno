@@ -35,9 +35,9 @@ using namespace juno;
 
 int main()
 {
-    double duration = seconds(5000);
-    double delay = 2000;
-    double iterationCount = 2;
+    double duration = seconds(5);
+    double delay = seconds(2);
+    double iterationCount = indefinite();
     Direction direction = Direction::Reverse;
     FillMode fillMode = FillMode::Backwards;
 
