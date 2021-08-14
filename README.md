@@ -10,7 +10,7 @@ Juno is a basic animation library in c++ based on [Webs Animations](https://draf
 .spinner {
   animation-duration : 5s;
   animation-delay : 2s;
-  animation-iteration-count : 2;
+  animation-iteration-count : indefinite;
   animation-direction : reverse;
   animation-fill-mode : backwards
 }
@@ -35,16 +35,16 @@ using namespace juno;
 
 int main()
 {
-    double duration = 5000;
+    double duration = seconds(5000);
     double delay = 2000;
-    double iteration_count = 2;
+    double iterationCount = 2;
     Direction direction = Direction::Reverse;
-    FillMode fill_mode = FillMode::Backwards;
+    FillMode fillMode = FillMode::Backwards;
 
-    Transform from = Transform::rotated(0);
-    Transform to = Transform::rotated(360);
+    Transform from = rotate(0);
+    Transform to = rotate(360);
 
-    Animation spinner(duration, delay, iteration_count, direction, fill_mode);
+    Animation spinner(duration, delay, iterationCount, direction, fillMode);
     AnimateTransform transform(from, to);
 
     while(spinner.running())
