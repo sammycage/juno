@@ -1,3 +1,6 @@
+#ifndef JUNO_H
+#define JUNO_H
+
 #include <vector>
 #include <tuple>
 
@@ -17,27 +20,29 @@ enum class FillMode {
     Both
 };
 
-class Bezier
+class TimingFunction
 {
 public:
-    Bezier() = default;
-    Bezier(double x1, double y1, double x2, double y2)
-        : x1(x1), y1(y1), x2(x2), y2(y2)
-    {}
+    enum class Type
+    {
+        Linear,
+        Bezier,
+        Step
+    };
+
+    TimingFunction() = default;
 
     double solve(double progress) const;
 
-    static const Bezier Linear;
-    static const Bezier Ease;
-    static const Bezier EaseIn;
-    static const Bezier EaseOut;
-    static const Bezier EaseInOut;
+    static const TimingFunction& linear();
+    static const TimingFunction& ease();
+    static const TimingFunction& easeIn();
+    static const TimingFunction& easeInOut();
 
-public:
-    double x1{0};
-    double y1{0};
-    double x2{1};
-    double y2{1};
+    static TimingFunction cubicBezier(double x1, double y1, double x2, double y2);
+
+private:
+    Type m_type;
 };
 
 double indefinite();
@@ -47,7 +52,7 @@ double seconds(double value);
 class Animation
 {
 public:
-    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, const Bezier& easing = Bezier::Linear);
+    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, const TimingFunction& timing = TimingFunction::linear());
 
     double progressAt(double time) const;
     double progress() const { return progressAt(currentTime()); }
@@ -90,8 +95,8 @@ public:
     void setFillMode(FillMode fill) { m_fillMode = fill; }
     FillMode fillMode() { return m_fillMode; }
 
-    void setEasingCurve(const Bezier& easing) { m_easingCurve = easing; }
-    const Bezier& easingCurve() { return m_easingCurve; }
+    void setTimingFunction(const TimingFunction& timing) { m_timingFunction = timing; }
+    const TimingFunction& timingFunction() { return m_timingFunction; }
 
 private:
     double m_duration;
@@ -101,7 +106,7 @@ private:
     double m_playbackRate;
     Direction m_playbackDirection;
     FillMode m_fillMode;
-    Bezier m_easingCurve;
+    TimingFunction m_timingFunction;
 
     double m_startTime;
     mutable double m_lastTime;
@@ -117,17 +122,17 @@ class Animate
 {
 public:
     using ValueType = T;
-    using KeyFrame = std::tuple<double, ValueType, Bezier>;
+    using KeyFrame = std::tuple<double, ValueType, TimingFunction>;
     using KeyFrames = std::vector<KeyFrame>;
 
 public:
-    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const Bezier& easing = Bezier::Linear)
+    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const TimingFunction& timing = TimingFunction::linear())
     {
-        m_frames.emplace_back(0.0, from, easing);
-        m_frames.emplace_back(1.0, to, Bezier::Linear);
+        m_frames.emplace_back(0.0, from, timing);
+        m_frames.emplace_back(1.0, to, TimingFunction::linear());
     }
 
-    Animate<T>& addKeyFrameAt(double step, const ValueType& value, const Bezier& easing = Bezier::Linear)
+    Animate<T>& addKeyFrameAt(double step, const ValueType& value, const TimingFunction& timing = TimingFunction::linear())
     {
         if(step > 1.0) step = 1.0;
         if(step < 0.0) step = 0.0;
@@ -137,9 +142,9 @@ public:
             ++i;
 
         if(i < m_frames.size() && std::get<0>(m_frames[i]) == step)
-            m_frames[i] = std::make_tuple(step, value, easing);
+            m_frames[i] = std::make_tuple(step, value, timing);
         else
-            m_frames.emplace(m_frames.begin() + i, step, value, easing);
+            m_frames.emplace(m_frames.begin() + i, step, value, timing);
 
         return *this;
     }
@@ -148,9 +153,9 @@ public:
     {
         auto& step = std::get<0>(frame);
         auto& value = std::get<1>(frame);
-        auto& easing = std::get<2>(frame);
+        auto& timing = std::get<2>(frame);
 
-        return addKeyFrameAt(step, value, easing);
+        return addKeyFrameAt(step, value, timing);
     }
 
     void addKeyFrames(const KeyFrames& frames)
@@ -181,14 +186,14 @@ public:
 
         auto& fromValue = std::get<1>(from);
         auto& toValue = std::get<1>(to);
-        auto& easing = std::get<2>(from);
+        auto& timing = std::get<2>(from);
 
-        return blend<T>(fromValue, toValue, easing.solve(effectivePercent));
+        return blend<T>(fromValue, toValue, timing.solve(effectivePercent));
     }
 
-    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const Bezier& easing = Bezier::Linear)
+    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const TimingFunction& timing = TimingFunction::linear())
     {
-        *this = Animate<T>(from, to, easing);
+        *this = Animate<T>(from, to, timing);
         return *this;
     }
 
@@ -198,8 +203,8 @@ public:
     void setToValue(const ValueType& value) { std::get<1>(m_frames.back()) = value; }
     const ValueType& toValue() const { return std::get<2>(m_frames.back()); }
 
-    void setEasingCurve(const Bezier& easing) { std::get<2>(m_frames.front()) = easing; }
-    const Bezier& easingCurve() const { return std::get<2>(m_frames.front()); }
+    void setTimingFunction(const TimingFunction& timing) { std::get<2>(m_frames.front()) = timing; }
+    const TimingFunction& timingFunction() const { return std::get<2>(m_frames.front()); }
 
     const KeyFrames& keyFrames() const { return m_frames; }
 private:
@@ -207,3 +212,5 @@ private:
 };
 
 } // namespace juno
+
+#endif // JUNO_H
