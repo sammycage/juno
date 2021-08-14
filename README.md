@@ -56,3 +56,13 @@ int main()
     return 0;
 }
 ```
+
+# Features
+
+- AnimateNumber(TODO)
+- AnimateColor(TODO)
+- AnimateTransform(TODO)
+- AnimatePoint(TODO)
+- AnimateRect(TODO)
+- AnimatePath(TODO)
+- AnimateMotion(TODO)
