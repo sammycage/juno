@@ -21,7 +21,9 @@ class Bezier
 {
 public:
     Bezier() = default;
-    Bezier(double x1, double y1, double x2, double y2);
+    Bezier(double x1, double y1, double x2, double y2)
+        : x1(x1), y1(y1), x2(x2), y2(y2)
+    {}
 
     double solve(double progress) const;
 
@@ -38,6 +40,10 @@ public:
     double y2{1};
 };
 
+double indefinite();
+bool isindefinite(double value);
+double seconds(double value);
+
 class Animation
 {
 public:
@@ -49,7 +55,7 @@ public:
     double repeatCountAt(double time) const;
     double repeatCount() const { return repeatCountAt(currentTime()); }
 
-    void setCurrentTime(double offset);
+    void setCurrentTime(double time);
     double currentTime() const;
 
     void setPlaybackRate(double rate);
@@ -64,6 +70,8 @@ public:
     bool playing() const { return m_playing; }
 
     double activeDuration() const;
+    double totalDuration() const;
+
     void setDuration(double duration) { m_duration = duration; }
     double duration() const { return m_duration; }
 
@@ -82,7 +90,7 @@ public:
     void setFillMode(FillMode fill) { m_fillMode = fill; }
     FillMode fillMode() { return m_fillMode; }
 
-    void setEasingCurve(Bezier easing) { m_easingCurve = easing; }
+    void setEasingCurve(const Bezier& easing) { m_easingCurve = easing; }
     const Bezier& easingCurve() { return m_easingCurve; }
 
 private:
@@ -96,8 +104,8 @@ private:
     Bezier m_easingCurve;
 
     double m_startTime;
-    double m_lastTime;
-    double m_offset;
+    mutable double m_lastTime;
+    double m_pauseTime;
     bool m_playing;
 };
 
@@ -108,33 +116,18 @@ template<typename T>
 class Animate
 {
 public:
-    using KeyValue = T;
-    using KeyFrame = std::tuple<double, KeyValue, Bezier>;
+    using ValueType = T;
+    using KeyFrame = std::tuple<double, ValueType, Bezier>;
     using KeyFrames = std::vector<KeyFrame>;
 
 public:
-    Animate(const KeyValue& from = KeyValue{}, const KeyValue& to = KeyValue{}, const Bezier& easing = Bezier::Linear)
+    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const Bezier& easing = Bezier::Linear)
     {
         m_frames.emplace_back(0.0, from, easing);
         m_frames.emplace_back(1.0, to, Bezier::Linear);
     }
 
-    void setFromValue(const KeyValue& value)
-    {
-        std::get<1>(m_frames.front()) = value;
-    }
-
-    void setToValue(const KeyValue& value)
-    {
-        std::get<1>(m_frames.back()) = value;
-    }
-
-    void setEasingCurve(const Bezier& easing)
-    {
-        std::get<2>(m_frames.front()) = easing;
-    }
-
-    Animate<T>& addKeyFrameAt(double step, const KeyValue& value, const Bezier& easing = Bezier::Linear)
+    Animate<T>& addKeyFrameAt(double step, const ValueType& value, const Bezier& easing = Bezier::Linear)
     {
         if(step > 1.0) step = 1.0;
         if(step < 0.0) step = 0.0;
@@ -166,7 +159,7 @@ public:
             addKeyFrame(frame);
     }
 
-    KeyValue valueAt(double progress) const
+    ValueType valueAt(double progress) const
     {
         if(progress > 1.0) progress = 1.0;
         if(progress < 0.0) progress = 0.0;
@@ -193,17 +186,22 @@ public:
         return blend<T>(fromValue, toValue, easing.solve(effectivePercent));
     }
 
-    Animate<T>& reset(const KeyValue& from = KeyValue{}, const KeyValue& to = KeyValue{}, const Bezier& easing = Bezier::Linear)
+    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const Bezier& easing = Bezier::Linear)
     {
         *this = Animate<T>(from, to, easing);
         return *this;
     }
 
-    const KeyValue& fromValue() const { return std::get<2>(m_frames.front()); }
-    const KeyValue& toValue() const { return std::get<2>(m_frames.back()); }
-    const Bezier& easing() const { return std::get<2>(m_frames.front()); }
-    const KeyFrames& keyFrames() const { return m_frames; }
+    void setFromValue(const ValueType& value) { std::get<1>(m_frames.front()) = value; }
+    const ValueType& fromValue() const { return std::get<2>(m_frames.front()); }
 
+    void setToValue(const ValueType& value) { std::get<1>(m_frames.back()) = value; }
+    const ValueType& toValue() const { return std::get<2>(m_frames.back()); }
+
+    void setEasingCurve(const Bezier& easing) { std::get<2>(m_frames.front()) = easing; }
+    const Bezier& easingCurve() const { return std::get<2>(m_frames.front()); }
+
+    const KeyFrames& keyFrames() const { return m_frames; }
 private:
     KeyFrames m_frames;
 };
