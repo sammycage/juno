@@ -57,7 +57,7 @@ int main()
 }
 ```
 
-# Features
+## Features
 
 - AnimateNumber(TODO)
 - AnimateColor(TODO)
