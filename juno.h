@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <tuple>
+#include <memory>
 
 namespace juno {
 
@@ -26,23 +27,71 @@ public:
     enum class Type
     {
         Linear,
-        Bezier,
-        Step
+        CubicBezier,
+        Steps
     };
 
     TimingFunction() = default;
+    virtual ~TimingFunction() = default;
 
-    double solve(double progress) const;
+    virtual double solve(double progress) const = 0;
 
-    static const TimingFunction& linear();
-    static const TimingFunction& ease();
-    static const TimingFunction& easeIn();
-    static const TimingFunction& easeInOut();
+    Type type() const { return m_type; }
 
-    static TimingFunction cubicBezier(double x1, double y1, double x2, double y2);
+protected:
+    TimingFunction(Type type);
 
 private:
     Type m_type;
+};
+
+class LinearTimingFunction : public TimingFunction
+{
+public:
+    static std::shared_ptr<LinearTimingFunction> create();
+
+    double solve(double progress) const;
+
+private:
+    LinearTimingFunction();
+};
+
+class CubicBezierTimingFunction
+{
+public:
+    static std::shared_ptr<LinearTimingFunction> create(double x1, double y1, double x2, double y2);
+
+    static std::shared_ptr<LinearTimingFunction> ease();
+    static std::shared_ptr<LinearTimingFunction> easeIn();
+    static std::shared_ptr<LinearTimingFunction> easeOut();
+    static std::shared_ptr<LinearTimingFunction> easeInOut();
+
+    double solve(double progress) const;
+
+private:
+    CubicBezierTimingFunction(double x1, double y1, double x2, double y2);
+};
+
+class StepsTimingFunction
+{
+public:
+    enum class Position
+    {
+        Start,
+        Middle,
+        End
+    };
+
+    static std::shared_ptr<LinearTimingFunction> create(int steps, Position position);
+
+    static std::shared_ptr<StepsTimingFunction> start();
+    static std::shared_ptr<StepsTimingFunction> middle();
+    static std::shared_ptr<StepsTimingFunction> end();
+
+    double solve(double progress) const;
+
+private:
+    StepsTimingFunction(int steps, Position position);
 };
 
 double indefinite();
@@ -52,7 +101,7 @@ double seconds(double value);
 class Animation
 {
 public:
-    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, const TimingFunction& timing = TimingFunction::linear());
+    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, std::shared_ptr<TimingFunction> timing = nullptr);
 
     double progressAt(double time) const;
     double progress() const { return progressAt(currentTime()); }
@@ -95,8 +144,8 @@ public:
     void setFillMode(FillMode fill) { m_fillMode = fill; }
     FillMode fillMode() { return m_fillMode; }
 
-    void setTimingFunction(const TimingFunction& timing) { m_timingFunction = timing; }
-    const TimingFunction& timingFunction() { return m_timingFunction; }
+    void setTimingFunction(std::shared_ptr<TimingFunction> timing) { m_timingFunction = timing; }
+    std::shared_ptr<TimingFunction> timingFunction() { return m_timingFunction; }
 
 private:
     double m_duration;
@@ -106,7 +155,7 @@ private:
     double m_playbackRate;
     Direction m_playbackDirection;
     FillMode m_fillMode;
-    TimingFunction m_timingFunction;
+    std::shared_ptr<TimingFunction> m_timingFunction;
 
     double m_startTime;
     mutable double m_lastTime;
@@ -122,17 +171,17 @@ class Animate
 {
 public:
     using ValueType = T;
-    using KeyFrame = std::tuple<double, ValueType, TimingFunction>;
+    using KeyFrame = std::tuple<double, ValueType, std::shared_ptr<TimingFunction>>;
     using KeyFrames = std::vector<KeyFrame>;
 
 public:
-    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const TimingFunction& timing = TimingFunction::linear())
+    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, std::shared_ptr<TimingFunction> timing = nullptr)
     {
         m_frames.emplace_back(0.0, from, timing);
-        m_frames.emplace_back(1.0, to, TimingFunction::linear());
+        m_frames.emplace_back(1.0, to, nullptr);
     }
 
-    Animate<T>& addKeyFrameAt(double step, const ValueType& value, const TimingFunction& timing = TimingFunction::linear())
+    Animate<T>& addKeyFrameAt(double step, const ValueType& value, std::shared_ptr<TimingFunction> timing = nullptr)
     {
         if(step > 1.0) step = 1.0;
         if(step < 0.0) step = 0.0;
@@ -187,11 +236,12 @@ public:
         auto& fromValue = std::get<1>(from);
         auto& toValue = std::get<1>(to);
         auto& timing = std::get<2>(from);
-
-        return blend<T>(fromValue, toValue, timing.solve(effectivePercent));
+        if(timing)
+            effectivePercent = timing->solve(effectivePercent);
+        return blend<T>(fromValue, toValue, effectivePercent);
     }
 
-    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, const TimingFunction& timing = TimingFunction::linear())
+    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, std::shared_ptr<TimingFunction> timing = nullptr)
     {
         *this = Animate<T>(from, to, timing);
         return *this;
@@ -203,8 +253,8 @@ public:
     void setToValue(const ValueType& value) { std::get<1>(m_frames.back()) = value; }
     const ValueType& toValue() const { return std::get<2>(m_frames.back()); }
 
-    void setTimingFunction(const TimingFunction& timing) { std::get<2>(m_frames.front()) = timing; }
-    const TimingFunction& timingFunction() const { return std::get<2>(m_frames.front()); }
+    void setTimingFunction(std::shared_ptr<TimingFunction> timing) { std::get<2>(m_frames.front()) = timing; }
+    std::shared_ptr<TimingFunction> timingFunction() const { return std::get<2>(m_frames.front()); }
 
     const KeyFrames& keyFrames() const { return m_frames; }
 private:
