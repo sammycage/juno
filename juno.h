@@ -31,10 +31,8 @@ public:
         Steps
     };
 
-    TimingFunction() = default;
     virtual ~TimingFunction() = default;
-
-    virtual double solve(double progress) const = 0;
+    virtual double solve(double x) const = 0;
 
     Type type() const { return m_type; }
 
@@ -50,29 +48,39 @@ class LinearTimingFunction : public TimingFunction
 public:
     static std::shared_ptr<LinearTimingFunction> create();
 
-    double solve(double progress) const;
+    double solve(double x) const;
 
 private:
     LinearTimingFunction();
 };
 
-class CubicBezierTimingFunction
+class CubicBezierTimingFunction : public TimingFunction
 {
 public:
-    static std::shared_ptr<LinearTimingFunction> create(double x1, double y1, double x2, double y2);
+    static std::shared_ptr<CubicBezierTimingFunction> create(double x1, double y1, double x2, double y2);
 
-    static std::shared_ptr<LinearTimingFunction> ease();
-    static std::shared_ptr<LinearTimingFunction> easeIn();
-    static std::shared_ptr<LinearTimingFunction> easeOut();
-    static std::shared_ptr<LinearTimingFunction> easeInOut();
+    static std::shared_ptr<CubicBezierTimingFunction> ease();
+    static std::shared_ptr<CubicBezierTimingFunction> easeIn();
+    static std::shared_ptr<CubicBezierTimingFunction> easeOut();
+    static std::shared_ptr<CubicBezierTimingFunction> easeInOut();
 
-    double solve(double progress) const;
+    double solve(double x) const;
 
 private:
     CubicBezierTimingFunction(double x1, double y1, double x2, double y2);
+
+private:
+    double ax;
+    double bx;
+    double cx;
+    double ay;
+    double by;
+    double cy;
+    double adx;
+    double bdx;
 };
 
-class StepsTimingFunction
+class StepsTimingFunction : public TimingFunction
 {
 public:
     enum class Position
@@ -82,16 +90,20 @@ public:
         End
     };
 
-    static std::shared_ptr<LinearTimingFunction> create(int steps, Position position);
+    static std::shared_ptr<StepsTimingFunction> create(int steps, Position position);
 
     static std::shared_ptr<StepsTimingFunction> start();
     static std::shared_ptr<StepsTimingFunction> middle();
     static std::shared_ptr<StepsTimingFunction> end();
 
-    double solve(double progress) const;
+    double solve(double x) const;
 
 private:
     StepsTimingFunction(int steps, Position position);
+
+private:
+    int m_steps;
+    Position m_position;
 };
 
 double indefinite();
