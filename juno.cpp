@@ -25,7 +25,7 @@ static inline double now()
     return 0;
 }
 
-Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, const TimingFunction& timing)
+Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, std::shared_ptr<TimingFunction> timing)
     : m_duration(duration),
       m_delay(delay),
       m_iterationCount(iteration),
