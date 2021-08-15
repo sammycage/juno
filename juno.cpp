@@ -93,9 +93,9 @@ CubicBezierTimingFunction::CubicBezierTimingFunction(double x1, double y1, doubl
 
 double CubicBezierTimingFunction::solve(double x) const
 {
-    auto curvex = [this](double t) { return (t*(t*(ax*t+bx+cx))); };
-    auto curvey = [this](double t) { return (t*(t*(ay*t+by+cy))); };
-    auto curvedx = [this](double t) { return (t*(t*(adx*t+bdx+cx))); };
+    auto curvex = [this](double t) { return t*(t*(ax*t+bx)+cx); };
+    auto curvey = [this](double t) { return t*(t*(ay*t+by)+cy); };
+    auto curvedx = [this](double t) { return t*(t*adx+bdx)+cx; };
 
     double t = x;
     for(int i = 0;i < 10;i++)
@@ -116,22 +116,22 @@ double CubicBezierTimingFunction::solve(double x) const
         t = t - dx / dxdt;
     }
 
-    double t1 = 0;
-    double t2 = 1;
+    double t0 = 0;
+    double t1 = 1;
     t = x;
 
-    while(t1 < t2)
+    while(t0 < t1)
     {
         double dx = curvex(t) - x;
         if(std::abs(dx) < 1e-4)
             break;
 
         if(dx > 0)
-            t2 = t;
-        else
             t1 = t;
+        else
+            t0 = t;
 
-        t = t1 + 0.5 * (t2 - t1);
+        t = t0 + 0.5 * (t1 - t0);
     }
 
     return curvey(t);

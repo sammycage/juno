@@ -1,6 +1,8 @@
 #include "juno.h"
 
-int main(void)
+using namespace juno;
+
+int main()
 {
     return 0;
 }
