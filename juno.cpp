@@ -80,11 +80,11 @@ CubicBezierTimingFunction::CubicBezierTimingFunction(double x1, double y1, doubl
     : TimingFunction(TimingFunction::Type::CubicBezier)
 {
     ax = 3.0 * (x1 - x2) + 1.0;
-    bx = 3.0 * (x2 - 2.0 * x1) + 1.0;
+    bx = 3.0 * (x2 - 2.0 * x1);
     cx = 3.0 * x1;
 
     ay = 3.0 * (y1 - y2) + 1.0;
-    by = 3.0 * (y2 - 2.0 * y1) + 1.0;
+    by = 3.0 * (y2 - 2.0 * y1);
     cy = 3.0 * y1;
 
     adx = 3.0 * ax;
