@@ -2,13 +2,9 @@
 
 #include <limits>
 #include <cmath>
+#include <chrono>
 
 namespace juno {
-
-double seconds(double value)
-{
-    return (value * 1000.0);
-}
 
 double indefinite()
 {
@@ -18,11 +14,6 @@ double indefinite()
 bool isindefinite(double value)
 {
     return std::isinf(value);
-}
-
-static inline double now()
-{
-    return 0;
 }
 
 TimingFunction::TimingFunction(Type type)
@@ -186,6 +177,14 @@ double StepsTimingFunction::solve(double x) const
     return (std::floor(m_steps * x) + offset) / m_steps;
 }
 
+static inline double now()
+{
+    using duration_t = std::chrono::duration<double>;
+    auto now = std::chrono::steady_clock::now();
+    auto epoch = now.time_since_epoch();
+    return std::chrono::duration_cast<duration_t>(epoch).count();
+}
+
 Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, std::shared_ptr<TimingFunction> timing)
     : m_duration(duration),
       m_delay(delay),
@@ -200,6 +199,98 @@ Animation::Animation(double duration, double delay, double iteration, Direction 
       m_pauseTime(0),
       m_playing(true)
 {
+}
+
+Animation::Phase Animation::phaseAt(double time) const
+{
+    double activeDuration = this->activeDuration();
+    double totalDuration = this->totalDuration();
+
+    double beforeActiveBoundaryTime = std::max(std::min(m_delay, totalDuration), 0.0);
+    if(time < beforeActiveBoundaryTime || (time == beforeActiveBoundaryTime && m_playbackRate < 0.0))
+        return Phase::Before;
+
+    double activeAfterBoundaryTime = std::max(std::min(m_delay + activeDuration, totalDuration), 0.0);
+    if(time > activeAfterBoundaryTime || (time == activeAfterBoundaryTime && m_playbackRate >= 0.0))
+        return Phase::After;
+
+    return Phase::Active;
+}
+
+double Animation::repeatCountAt(double time) const
+{
+    return 0.0;
+}
+
+double Animation::progressAt(double time) const
+{
+    double activeDuration = this->activeDuration();
+    double activeTime;
+    Phase phase = phaseAt(time);
+    switch(phase) {
+    case Phase::Before:
+        if(m_fillMode == FillMode::Forwards || m_fillMode == FillMode::None)
+            return 0.0;
+        activeTime = std::max(time - m_delay, 0.0);
+        break;
+    case Phase::Active:
+        activeTime = time - m_delay;
+        break;
+    case Phase::After:
+        if(m_fillMode == FillMode::Backwards || m_fillMode == FillMode::None)
+            return 0.0;
+        activeTime = std::max(std::min(time - m_delay, activeDuration), 0.0);
+        break;
+    }
+
+    double overallProgress;
+    if(m_duration == 0.0)
+        overallProgress = (phase == Phase::Before) ? 0.0 : m_iterationCount;
+    else
+        overallProgress = activeTime / m_duration;
+
+    if(!isindefinite(overallProgress))
+        overallProgress += m_iterationStart;
+
+    double simpleIterationProgress;
+    if(isindefinite(overallProgress))
+        simpleIterationProgress = std::fmod(m_iterationStart, 1.0);
+    else
+        simpleIterationProgress = std::fmod(overallProgress, 1.0);
+
+    if(simpleIterationProgress == 0.0 && (phase == Phase::Active || phase == Phase::After) && (activeTime == activeDuration) && m_iterationCount != 0.0)
+        simpleIterationProgress = 1.0;
+
+    double currentIteration;
+    if(phase == Phase::After && isindefinite(m_iterationCount))
+        currentIteration = indefinite();
+    else if(simpleIterationProgress == 1.0)
+        currentIteration = std::max(0.0, std::floor(overallProgress) - 1);
+    else
+        currentIteration = std::floor(overallProgress);
+
+    bool isCurrentIterationEven = currentIteration == 0.0 || isindefinite(currentIteration) || std::fmod(currentIteration, 2.0) == 0.0;
+    bool isCurrentIterationForwards;
+    switch(m_playbackDirection) {
+    case Direction::Normal:
+        isCurrentIterationForwards = true;
+        break;
+    case Direction::Reverse:
+        isCurrentIterationForwards = false;
+        break;
+    case Direction::Alternate:
+        isCurrentIterationForwards = isCurrentIterationEven;
+        break;
+    case Direction::AlternateReverse:
+        isCurrentIterationForwards = !isCurrentIterationEven;
+        break;
+    }
+
+    double directedProgress = isCurrentIterationForwards ? simpleIterationProgress : 1.0 - simpleIterationProgress;
+    if(m_timingFunction == nullptr)
+        return directedProgress;
+
+    return m_timingFunction->solve(directedProgress);
 }
 
 void Animation::setCurrentTime(double time)
@@ -251,7 +342,7 @@ void Animation::restart()
 
 bool Animation::running() const
 {
-    return (m_playbackRate < 0 && currentTime() > 0) || (m_playbackRate > 0 && currentTime() < totalDuration());
+    return (m_playbackRate < 0 && currentTime() >= 0) || (m_playbackRate > 0 && currentTime() <= totalDuration());
 }
 
 double Animation::activeDuration() const
@@ -261,7 +352,7 @@ double Animation::activeDuration() const
 
 double Animation::totalDuration() const
 {
-    return activeDuration() + m_delay;
+    return std::max(m_delay + activeDuration(), 0.0);;
 }
 
 } // namespace juno

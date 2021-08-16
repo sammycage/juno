@@ -7,14 +7,16 @@
 
 namespace juno {
 
-enum class Direction {
+enum class Direction
+{
     Normal,
     Reverse,
     Alternate,
     AlternateReverse
 };
 
-enum class FillMode {
+enum class FillMode
+{
     None,
     Forwards,
     Backwards,
@@ -108,12 +110,21 @@ private:
 
 double indefinite();
 bool isindefinite(double value);
-double seconds(double value);
 
 class Animation
 {
 public:
+    enum class Phase
+    {
+        Before,
+        Active,
+        After
+    };
+
     Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, std::shared_ptr<TimingFunction> timing = nullptr);
+
+    Phase phaseAt(double time) const;
+    Phase phase() const { return phaseAt(currentTime()); }
 
     double progressAt(double time) const;
     double progress() const { return progressAt(currentTime()); }
