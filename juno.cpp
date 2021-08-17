@@ -1,358 +1,305 @@
-#include "juno.h"
+#ifndef JUNO_H
+#define JUNO_H
 
-#include <limits>
-#include <cmath>
-#include <chrono>
+#include <vector>
+#include <tuple>
+#include <memory>
 
 namespace juno {
 
-double indefinite()
+enum class Direction
 {
-    return std::numeric_limits<double>::infinity();
-}
+    Normal,
+    Reverse,
+    Alternate,
+    AlternateReverse
+};
 
-bool isindefinite(double value)
+enum class FillMode
 {
-    return std::isinf(value);
-}
+    None,
+    Forwards,
+    Backwards,
+    Both
+};
 
-TimingFunction::TimingFunction(Type type)
-    : m_type(type)
+class Timing
 {
-}
-
-std::shared_ptr<LinearTimingFunction> LinearTimingFunction::create()
-{
-    static std::shared_ptr<LinearTimingFunction> timing(new LinearTimingFunction);
-    return timing;
-}
-
-LinearTimingFunction::LinearTimingFunction()
-    : TimingFunction(TimingFunction::Type::Linear)
-{
-}
-
-double LinearTimingFunction::solve(double x) const
-{
-    return x;
-}
-
-std::shared_ptr<CubicBezierTimingFunction> CubicBezierTimingFunction::create(double x1, double y1, double x2, double y2)
-{
-    std::shared_ptr<CubicBezierTimingFunction> timing(new CubicBezierTimingFunction(x1, y1, x2, y2));
-    return timing;
-}
-
-std::shared_ptr<CubicBezierTimingFunction> CubicBezierTimingFunction::ease()
-{
-    static std::shared_ptr<CubicBezierTimingFunction> timing(new CubicBezierTimingFunction(0.25, 0.1, 0.25, 1.0));
-    return timing;
-}
-
-std::shared_ptr<CubicBezierTimingFunction> CubicBezierTimingFunction::easeIn()
-{
-    static std::shared_ptr<CubicBezierTimingFunction> timing(new CubicBezierTimingFunction(0.42, 0.0, 1.0, 1.0));
-    return timing;
-}
-
-std::shared_ptr<CubicBezierTimingFunction> CubicBezierTimingFunction::easeOut()
-{
-    static std::shared_ptr<CubicBezierTimingFunction> timing(new CubicBezierTimingFunction(0.0, 0.0, 0.58, 1.0));
-    return timing;
-}
-
-std::shared_ptr<CubicBezierTimingFunction> CubicBezierTimingFunction::easeInOut()
-{
-    static std::shared_ptr<CubicBezierTimingFunction> timing(new CubicBezierTimingFunction(0.42, 0.0, 0.58, 1.0));
-    return timing;
-}
-
-CubicBezierTimingFunction::CubicBezierTimingFunction(double x1, double y1, double x2, double y2)
-    : TimingFunction(TimingFunction::Type::CubicBezier)
-{
-    ax = 3.0 * (x1 - x2) + 1.0;
-    bx = 3.0 * (x2 - 2.0 * x1);
-    cx = 3.0 * x1;
-
-    ay = 3.0 * (y1 - y2) + 1.0;
-    by = 3.0 * (y2 - 2.0 * y1);
-    cy = 3.0 * y1;
-
-    adx = 3.0 * ax;
-    bdx = 2.0 * bx;
-}
-
-double CubicBezierTimingFunction::solve(double x) const
-{
-    auto curvex = [this](double t) { return t*(t*(ax*t+bx)+cx); };
-    auto curvey = [this](double t) { return t*(t*(ay*t+by)+cy); };
-    auto curvedx = [this](double t) { return t*(t*adx+bdx)+cx; };
-
-    double t = x;
-    for(int i = 0;i < 10;i++)
+public:
+    enum class Type
     {
-        double dx = curvex(t) - x;
-        if(std::abs(dx) < 1e-4)
-        {
-            if(t < 0) t = 0;
-            else if(t > 1) t = 1;
+        Linear,
+        CubicBezier,
+        Steps
+    };
 
-            return curvey(t);
+    virtual ~Timing() = default;
+    virtual double solve(double x) const = 0;
+
+    Type type() const { return m_type; }
+
+protected:
+    Timing(Type type);
+
+private:
+    Type m_type;
+};
+
+class LinearTiming : public Timing
+{
+public:
+    static std::shared_ptr<LinearTiming> create();
+
+    double solve(double x) const;
+
+private:
+    LinearTiming();
+};
+
+class CubicBezierTiming : public Timing
+{
+public:
+    static std::shared_ptr<CubicBezierTiming> create(double x1, double y1, double x2, double y2);
+
+    static std::shared_ptr<CubicBezierTiming> ease();
+    static std::shared_ptr<CubicBezierTiming> easeIn();
+    static std::shared_ptr<CubicBezierTiming> easeOut();
+    static std::shared_ptr<CubicBezierTiming> easeInOut();
+
+    double solve(double x) const;
+
+private:
+    CubicBezierTiming(double x1, double y1, double x2, double y2);
+
+private:
+    double ax;
+    double bx;
+    double cx;
+    double ay;
+    double by;
+    double cy;
+    double adx;
+    double bdx;
+};
+
+class StepsTiming : public Timing
+{
+public:
+    enum class Position
+    {
+        Start,
+        Middle,
+        End
+    };
+
+    static std::shared_ptr<StepsTiming> create(int steps, Position position);
+
+    static std::shared_ptr<StepsTiming> start();
+    static std::shared_ptr<StepsTiming> middle();
+    static std::shared_ptr<StepsTiming> end();
+
+    double solve(double x) const;
+
+private:
+    StepsTiming(int steps, Position position);
+
+private:
+    int m_steps;
+    Position m_position;
+};
+
+using TimingFunction = std::shared_ptr<Timing>;
+
+double indefinite();
+bool isindefinite(double value);
+
+class Animation
+{
+public:
+    enum class Phase
+    {
+        Before,
+        Active,
+        After
+    };
+
+    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, TimingFunction timing = nullptr);
+
+    Phase phaseAt(double time) const;
+    Phase phase() const { return phaseAt(currentTime()); }
+
+    double progressAt(double time) const;
+    double progress() const { return progressAt(currentTime()); }
+
+    double repeatCountAt(double time) const;
+    double repeatCount() const { return repeatCountAt(currentTime()); }
+
+    void setCurrentTime(double time);
+    double currentTime() const;
+
+    void setPlaybackRate(double rate);
+    double playbackRate() const { return m_playbackRate; }
+
+    void pause();
+    void play();
+    void restart();
+    void reverse() { setPlaybackRate(-m_playbackRate); }
+
+    bool running() const;
+    bool playing() const { return m_playing; }
+
+    double activeDuration() const;
+    double totalDuration() const;
+
+    void setDuration(double duration) { m_duration = duration; }
+    double duration() const { return m_duration; }
+
+    void setDelay(double delay) { m_delay = delay; }
+    double delay() const { return m_delay; }
+
+    void setIterationCount(double iteration) { m_iterationCount = iteration; }
+    double iterationCount() const { return m_iterationCount; }
+
+    void setIterationStart(double start) { m_iterationStart = start; }
+    double iterationStart() const { return m_iterationStart; }
+
+    void setPlaybackDirection(Direction direction) { m_playbackDirection = direction; }
+    Direction playbackDirection() { return m_playbackDirection; }
+
+    void setFillMode(FillMode fill) { m_fillMode = fill; }
+    FillMode fillMode() { return m_fillMode; }
+
+    void setTimingFunction(TimingFunction timing) { m_timingFunction = timing; }
+    TimingFunction timingFunction() { return m_timingFunction; }
+
+private:
+    double m_duration;
+    double m_delay;
+    double m_iterationCount;
+    double m_iterationStart;
+    double m_playbackRate;
+    Direction m_playbackDirection;
+    FillMode m_fillMode;
+    TimingFunction m_timingFunction;
+
+    double m_startTime;
+    mutable double m_lastTime;
+    double m_pauseTime;
+    bool m_playing;
+};
+
+template<typename T>
+T blend(const T& from, const T& to, double progress);
+
+template<typename T>
+class Animate
+{
+public:
+    using ValueType = T;
+    using KeyFrame = std::tuple<double, ValueType, TimingFunction>;
+    using KeyFrames = std::vector<KeyFrame>;
+
+public:
+    Animate(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, TimingFunction timing = nullptr)
+    {
+        m_frames.emplace_back(0.0, from, timing);
+        m_frames.emplace_back(1.0, to, nullptr);
+    }
+
+    Animate<T>& addKeyFrameAt(double step, const ValueType& value, TimingFunction timing = nullptr)
+    {
+        if(step > 1.0) step = 1.0;
+        if(step < 0.0) step = 0.0;
+
+        unsigned int i = 0;
+        while(i < m_frames.size() && std::get<0>(m_frames[i]) < step)
+            ++i;
+
+        if(i < m_frames.size() && std::get<0>(m_frames[i]) == step)
+            m_frames[i] = std::make_tuple(step, value, timing);
+        else
+            m_frames.emplace(m_frames.begin() + i, step, value, timing);
+
+        return *this;
+    }
+
+    Animate<T>& addKeyFrame(const KeyFrame& frame)
+    {
+        auto& step = std::get<0>(frame);
+        auto& value = std::get<1>(frame);
+        auto& timing = std::get<2>(frame);
+
+        return addKeyFrameAt(step, value, timing);
+    }
+
+    void addKeyFrames(const KeyFrames& frames)
+    {
+        for(auto& frame : frames)
+            addKeyFrame(frame);
+    }
+
+    ValueType valueAt(double progress) const
+    {
+        if(progress > 1.0) progress = 1.0;
+        if(progress < 0.0) progress = 0.0;
+
+        unsigned int index = 0;
+        while(index < m_frames.size() - 2)
+        {
+            if(std::get<0>(m_frames[index + 1]) > progress)
+                break;
+            ++index;
         }
 
-        double dxdt = curvedx(t);
-        if(dxdt < 1e-6)
-            break;
+        auto& from = m_frames[index];
+        auto& to = m_frames[index + 1];
 
-        t = t - dx / dxdt;
+        auto fromPercent = std::get<0>(from);
+        auto toPercent = std::get<0>(to); 
+        auto effectivePercent = (progress - fromPercent) / (toPercent - fromPercent);
+
+        auto& fromValue = std::get<1>(from);
+        auto& toValue = std::get<1>(to);
+        auto& timing = std::get<2>(from);
+        if(timing)
+            effectivePercent = timing->solve(effectivePercent);
+        return blend<T>(fromValue, toValue, effectivePercent);
     }
 
-    double t0 = 0;
-    double t1 = 1;
-    t = x;
-
-    while(t0 < t1)
+    Animate<T>& reset(const ValueType& from = ValueType{}, const ValueType& to = ValueType{}, TimingFunction timing = nullptr)
     {
-        double dx = curvex(t) - x;
-        if(std::abs(dx) < 1e-4)
-            break;
-
-        if(dx > 0)
-            t1 = t;
-        else
-            t0 = t;
-
-        t = t0 + 0.5 * (t1 - t0);
+        *this = Animate<T>(from, to, timing);
+        return *this;
     }
 
-    return curvey(t);
-}
+    void setFromValue(const ValueType& value) { std::get<1>(m_frames.front()) = value; }
+    const ValueType& fromValue() const { return std::get<2>(m_frames.front()); }
 
-std::shared_ptr<StepsTimingFunction> StepsTimingFunction::create(int steps, Position position)
-{
-    std::shared_ptr<StepsTimingFunction> timing(new StepsTimingFunction(steps, position));
-    return timing;
-}
+    void setToValue(const ValueType& value) { std::get<1>(m_frames.back()) = value; }
+    const ValueType& toValue() const { return std::get<2>(m_frames.back()); }
 
-std::shared_ptr<StepsTimingFunction> StepsTimingFunction::start()
-{
-    static std::shared_ptr<StepsTimingFunction> timing(new StepsTimingFunction(1, Position::Start));
-    return timing;
-}
+    void setTimingFunction(TimingFunction timing) { std::get<2>(m_frames.front()) = timing; }
+    TimingFunction timingFunction() const { return std::get<2>(m_frames.front()); }
 
-std::shared_ptr<StepsTimingFunction> StepsTimingFunction::middle()
-{
-    static std::shared_ptr<StepsTimingFunction> timing(new StepsTimingFunction(1, Position::Middle));
-    return timing;
-}
+    const KeyFrames& keyFrames() const { return m_frames; }
+private:
+    KeyFrames m_frames;
+};
 
-std::shared_ptr<StepsTimingFunction> StepsTimingFunction::end()
-{
-    static std::shared_ptr<StepsTimingFunction> timing(new StepsTimingFunction(1, Position::End));
-    return timing;
-}
+class Color;
+class Point;
+class Rect;
+class Path;
+class Transform;
 
-StepsTimingFunction::StepsTimingFunction(int steps, Position position)
-    : TimingFunction(TimingFunction::Type::Steps),
-      m_steps(steps),
-      m_position(position)
-{
-}
-
-double StepsTimingFunction::solve(double x) const
-{
-    double offset = 0;
-    switch(m_position) {
-    case Position::Start:
-        offset = 1.0;
-        break;
-    case Position::Middle:
-        offset = 0.5;
-        break;
-    case Position::End:
-        offset = 0.0;
-        break;
-    }
-
-    return (std::floor(m_steps * x) + offset) / m_steps;
-}
-
-static inline double now()
-{
-    using duration_t = std::chrono::duration<double>;
-    auto now = std::chrono::steady_clock::now();
-    auto epoch = now.time_since_epoch();
-    return std::chrono::duration_cast<duration_t>(epoch).count();
-}
-
-Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, std::shared_ptr<TimingFunction> timing)
-    : m_duration(duration),
-      m_delay(delay),
-      m_iterationCount(iteration),
-      m_iterationStart(0),
-      m_playbackRate(1),
-      m_playbackDirection(direction),
-      m_fillMode(fill),
-      m_timingFunction(timing),
-      m_startTime(now()),
-      m_lastTime(now()),
-      m_pauseTime(0),
-      m_playing(true)
-{
-}
-
-Animation::Phase Animation::phaseAt(double time) const
-{
-    double activeDuration = this->activeDuration();
-    double totalDuration = this->totalDuration();
-
-    double beforeActiveBoundaryTime = std::max(std::min(m_delay, totalDuration), 0.0);
-    if(time < beforeActiveBoundaryTime || (time == beforeActiveBoundaryTime && m_playbackRate < 0.0))
-        return Phase::Before;
-
-    double activeAfterBoundaryTime = std::max(std::min(m_delay + activeDuration, totalDuration), 0.0);
-    if(time > activeAfterBoundaryTime || (time == activeAfterBoundaryTime && m_playbackRate >= 0.0))
-        return Phase::After;
-
-    return Phase::Active;
-}
-
-double Animation::repeatCountAt(double time) const
-{
-    return 0.0;
-}
-
-double Animation::progressAt(double time) const
-{
-    double activeDuration = this->activeDuration();
-    double activeTime;
-    Phase phase = phaseAt(time);
-    switch(phase) {
-    case Phase::Before:
-        if(m_fillMode == FillMode::Forwards || m_fillMode == FillMode::None)
-            return 0.0;
-        activeTime = std::max(time - m_delay, 0.0);
-        break;
-    case Phase::Active:
-        activeTime = time - m_delay;
-        break;
-    case Phase::After:
-        if(m_fillMode == FillMode::Backwards || m_fillMode == FillMode::None)
-            return 0.0;
-        activeTime = std::max(std::min(time - m_delay, activeDuration), 0.0);
-        break;
-    }
-
-    double overallProgress;
-    if(m_duration == 0.0)
-        overallProgress = (phase == Phase::Before) ? 0.0 : m_iterationCount;
-    else
-        overallProgress = activeTime / m_duration;
-
-    if(!isindefinite(overallProgress))
-        overallProgress += m_iterationStart;
-
-    double simpleIterationProgress;
-    if(isindefinite(overallProgress))
-        simpleIterationProgress = std::fmod(m_iterationStart, 1.0);
-    else
-        simpleIterationProgress = std::fmod(overallProgress, 1.0);
-
-    if(simpleIterationProgress == 0.0 && (phase == Phase::Active || phase == Phase::After) && (activeTime == activeDuration) && m_iterationCount != 0.0)
-        simpleIterationProgress = 1.0;
-
-    double currentIteration;
-    if(phase == Phase::After && isindefinite(m_iterationCount))
-        currentIteration = indefinite();
-    else if(simpleIterationProgress == 1.0)
-        currentIteration = std::max(0.0, std::floor(overallProgress) - 1);
-    else
-        currentIteration = std::floor(overallProgress);
-
-    bool isCurrentIterationEven = currentIteration == 0.0 || isindefinite(currentIteration) || std::fmod(currentIteration, 2.0) == 0.0;
-    bool isCurrentIterationForwards;
-    switch(m_playbackDirection) {
-    case Direction::Normal:
-        isCurrentIterationForwards = true;
-        break;
-    case Direction::Reverse:
-        isCurrentIterationForwards = false;
-        break;
-    case Direction::Alternate:
-        isCurrentIterationForwards = isCurrentIterationEven;
-        break;
-    case Direction::AlternateReverse:
-        isCurrentIterationForwards = !isCurrentIterationEven;
-        break;
-    }
-
-    double directedProgress = isCurrentIterationForwards ? simpleIterationProgress : 1.0 - simpleIterationProgress;
-    if(m_timingFunction == nullptr)
-        return directedProgress;
-
-    return m_timingFunction->solve(directedProgress);
-}
-
-void Animation::setCurrentTime(double time)
-{
-    m_startTime = m_lastTime = now();
-    m_pauseTime = time;
-}
-
-double Animation::currentTime() const
-{
-    if(m_playing)
-        m_lastTime = now();
-
-    return ((m_lastTime - m_startTime) * m_playbackRate) + m_pauseTime;
-}
-
-void Animation::setPlaybackRate(double rate)
-{
-    m_pauseTime = currentTime();
-    m_startTime = m_lastTime = now();
-    m_playbackRate = rate;
-}
-
-void Animation::pause()
-{
-    if(!m_playing)
-        return;
-
-    m_pauseTime = currentTime();
-    m_startTime = m_lastTime = now();
-    m_playing = false;
-}
-
-void Animation::play()
-{
-    if(m_playing)
-        return;
-
-    m_startTime = m_lastTime = now();
-    m_playing = true;
-}
-
-void Animation::restart()
-{
-    m_startTime = m_lastTime = now();
-    m_pauseTime = 0;
-    m_playing = true;
-}
-
-bool Animation::running() const
-{
-    return (m_playbackRate < 0 && currentTime() >= 0) || (m_playbackRate > 0 && currentTime() <= totalDuration());
-}
-
-double Animation::activeDuration() const
-{
-    return (m_duration * m_iterationCount);
-}
-
-double Animation::totalDuration() const
-{
-    return std::max(m_delay + activeDuration(), 0.0);;
-}
+using AnimateInteger = Animate<int>;
+using AnimateNumber = Animate<double>;
+using AnimateColor = Animate<Color>;
+using AnimatePoint = Animate<Point>;
+using AnimateRect = Animate<Rect>;
+using AnimatePath = Animate<Path>;
+using AnimateTransform = Animate<Transform>;
 
 } // namespace juno
+
+#endif // JUNO_H
