@@ -35,14 +35,10 @@ public:
 
     virtual ~Timing() = default;
     virtual double solve(double x) const = 0;
-
-    Type type() const { return m_type; }
+    virtual Type type() const = 0;
 
 protected:
-    Timing(Type type);
-
-private:
-    Type m_type;
+    Timing() = default;
 };
 
 class LinearTiming : public Timing
@@ -51,6 +47,7 @@ public:
     static std::shared_ptr<LinearTiming> create();
 
     double solve(double x) const;
+    Type type() const { return Type::Linear; }
 
 private:
     LinearTiming();
@@ -67,6 +64,7 @@ public:
     static std::shared_ptr<CubicBezierTiming> easeInOut();
 
     double solve(double x) const;
+    Type type() const { return Type::CubicBezier; }
 
 private:
     CubicBezierTiming(double x1, double y1, double x2, double y2);
@@ -99,6 +97,7 @@ public:
     static std::shared_ptr<StepsTiming> end();
 
     double solve(double x) const;
+    Type type() const { return Type::Steps; }
 
 private:
     StepsTiming(int steps, Position position);
