@@ -16,11 +16,6 @@ bool isindefinite(double value)
     return std::isinf(value);
 }
 
-Timing::Timing(Type type)
-    : m_type(type)
-{
-}
-
 std::shared_ptr<LinearTiming> LinearTiming::create()
 {
     static std::shared_ptr<LinearTiming> timing(new LinearTiming);
@@ -28,7 +23,6 @@ std::shared_ptr<LinearTiming> LinearTiming::create()
 }
 
 LinearTiming::LinearTiming()
-    : Timing(Timing::Type::Linear)
 {
 }
 
@@ -68,7 +62,6 @@ std::shared_ptr<CubicBezierTiming> CubicBezierTiming::easeInOut()
 }
 
 CubicBezierTiming::CubicBezierTiming(double x1, double y1, double x2, double y2)
-    : Timing(Timing::Type::CubicBezier)
 {
     ax = 3.0 * (x1 - x2) + 1.0;
     bx = 3.0 * (x2 - 2.0 * x1);
@@ -153,8 +146,7 @@ std::shared_ptr<StepsTiming> StepsTiming::end()
 }
 
 StepsTiming::StepsTiming(int steps, Position position)
-    : Timing(Timing::Type::Steps),
-      m_steps(steps),
+    : m_steps(steps),
       m_position(position)
 {
 }
