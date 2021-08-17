@@ -222,7 +222,7 @@ double Animation::progressAt(double time) const
     Phase phase = phaseAt(time);
     switch(phase) {
     case Phase::Before:
-        if(m_fillMode == FillMode::Forwards || m_fillMode == FillMode::None)
+        if(m_fillMode == FillMode::Freeze)
             return 0.0;
         activeTime = std::max(time - m_startDelay, 0.0);
         break;
@@ -230,7 +230,7 @@ double Animation::progressAt(double time) const
         activeTime = time - m_startDelay;
         break;
     case Phase::After:
-        if(m_fillMode == FillMode::Backwards || m_fillMode == FillMode::None)
+        if(m_fillMode == FillMode::Remove)
             return 0.0;
         activeTime = std::max(std::min(time - m_startDelay, activeDuration), 0.0);
         break;
