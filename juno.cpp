@@ -179,7 +179,8 @@ static inline double now()
 
 Animation::Animation(double duration, double delay, double iteration, Direction direction, FillMode fill, TimingFunction timing)
     : m_duration(duration),
-      m_delay(delay),
+      m_startDelay(delay),
+      m_endDelay(0),
       m_iterationCount(iteration),
       m_iterationStart(0),
       m_playbackRate(1),
@@ -198,11 +199,11 @@ Animation::Phase Animation::phaseAt(double time) const
     double activeDuration = this->activeDuration();
     double totalDuration = this->totalDuration();
 
-    double beforeActiveBoundaryTime = std::max(std::min(m_delay, totalDuration), 0.0);
+    double beforeActiveBoundaryTime = std::max(std::min(m_startDelay, totalDuration), 0.0);
     if(time < beforeActiveBoundaryTime || (time == beforeActiveBoundaryTime && m_playbackRate < 0.0))
         return Phase::Before;
 
-    double activeAfterBoundaryTime = std::max(std::min(m_delay + activeDuration, totalDuration), 0.0);
+    double activeAfterBoundaryTime = std::max(std::min(m_startDelay + activeDuration, totalDuration), 0.0);
     if(time > activeAfterBoundaryTime || (time == activeAfterBoundaryTime && m_playbackRate >= 0.0))
         return Phase::After;
 
@@ -223,15 +224,15 @@ double Animation::progressAt(double time) const
     case Phase::Before:
         if(m_fillMode == FillMode::Forwards || m_fillMode == FillMode::None)
             return 0.0;
-        activeTime = std::max(time - m_delay, 0.0);
+        activeTime = std::max(time - m_startDelay, 0.0);
         break;
     case Phase::Active:
-        activeTime = time - m_delay;
+        activeTime = time - m_startDelay;
         break;
     case Phase::After:
         if(m_fillMode == FillMode::Backwards || m_fillMode == FillMode::None)
             return 0.0;
-        activeTime = std::max(std::min(time - m_delay, activeDuration), 0.0);
+        activeTime = std::max(std::min(time - m_startDelay, activeDuration), 0.0);
         break;
     }
 
@@ -344,7 +345,7 @@ double Animation::activeDuration() const
 
 double Animation::totalDuration() const
 {
-    return std::max(m_delay + activeDuration(), 0.0);;
+    return std::max(m_startDelay + activeDuration() + m_endDelay, 0.0);
 }
 
 template<> double blend<double>(const double& from, const double& to, double progress)
