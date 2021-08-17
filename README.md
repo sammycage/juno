@@ -1,6 +1,6 @@
 # Juno - Basic animation library in c++
 
-Juno is a basic animation library in c++ based on [Webs Animations](https://drafts.csswg.org/web-Animations)
+Juno is a basic animation library in c++ based on [SMIL](https://www.w3.org/TR/REC-smil/smil-animation.html) and [Web Animations](https://drafts.csswg.org/web-animations)
 
 ## Basic Usage
 
@@ -59,7 +59,8 @@ int main()
 
 ## Features
 
-- AnimateNumber(TODO)
+- AnimateInteger
+- AnimateNumber
 - AnimateColor(TODO)
 - AnimateTransform(TODO)
 - AnimatePoint(TODO)
