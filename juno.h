@@ -153,8 +153,11 @@ public:
     void setDuration(double duration) { m_duration = duration; }
     double duration() const { return m_duration; }
 
-    void setDelay(double delay) { m_delay = delay; }
-    double delay() const { return m_delay; }
+    void setStartDelay(double delay) { m_startDelay = delay; }
+    double startDelay() const { return m_startDelay; }
+
+    void setEndDelay(double delay) { m_endDelay = delay; }
+    double endDelay() const { return m_endDelay; }
 
     void setIterationCount(double iteration) { m_iterationCount = iteration; }
     double iterationCount() const { return m_iterationCount; }
@@ -173,7 +176,8 @@ public:
 
 private:
     double m_duration;
-    double m_delay;
+    double m_startDelay;
+    double m_endDelay;
     double m_iterationCount;
     double m_iterationStart;
     double m_playbackRate;
