@@ -120,7 +120,7 @@ public:
         After
     };
 
-    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::None, TimingFunction timing = nullptr);
+    Animation(double duration, double delay = 0, double iteration = 1, Direction direction = Direction::Normal, FillMode fill = FillMode::Remove, TimingFunction timing = nullptr);
 
     Phase phaseAt(double time) const;
     Phase phase() const { return phaseAt(currentTime()); }
