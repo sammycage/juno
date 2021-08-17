@@ -278,8 +278,8 @@ public:
     void setToValue(const ValueType& value) { std::get<1>(m_frames.back()) = value; }
     const ValueType& toValue() const { return std::get<2>(m_frames.back()); }
 
-    void setTimingFunction(std::shared_ptr<TimingFunction> timing) { std::get<2>(m_frames.front()) = timing; }
-    std::shared_ptr<TimingFunction> timingFunction() const { return std::get<2>(m_frames.front()); }
+    void setTimingFunction(TimingFunction timing) { std::get<2>(m_frames.front()) = timing; }
+    TimingFunction timingFunction() const { return std::get<2>(m_frames.front()); }
 
     const KeyFrames& keyFrames() const { return m_frames; }
 private:
