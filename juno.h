@@ -17,10 +17,8 @@ enum class Direction
 
 enum class FillMode
 {
-    None,
-    Forwards,
-    Backwards,
-    Both
+    Remove,
+    Freeze
 };
 
 class Timing
