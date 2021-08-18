@@ -4,29 +4,6 @@ Juno is a basic animation library in c++ based on [SMIL](https://www.w3.org/TR/R
 
 ## Basic Usage
 
-### CSS
-
-```css
-.spinner {
-  animation-duration : 5s;
-  animation-delay : 2s;
-  animation-iteration-count : indefinite;
-  animation-direction : reverse;
-  animation-fill-mode : backwards
-}
-
-@keyframes spinner {
-  from {
-    transform: rotate(0);
-  }
-  to {
-    transform: rotate(360);
-  }
-}
-```
-
-## C++
-
 ```cpp
 
 #include <juno.h>
@@ -35,27 +12,37 @@ using namespace juno;
 
 int main()
 {
-    double duration = 5;
+    double duration = 4;
     double delay = 0;
-    double iterationCount = indefinite();
-    Direction direction = Direction::Reverse;
-    FillMode fillMode = FillMode::Backwards;
+    double iterationCount = 3;
+    Direction direction = Direction::Alternate;
+    FillMode fillMode = FillMode::Remove;
+    TimingFunction timingFunction = LinearTiming::create();
+    Animation animation(duration, delay, iterationCount, direction, fillMode, timingFunction);
 
-    Transform from = rotate(0);
-    Transform to = rotate(360);
+    AnimateNumber cx;
+    cx.addKeyFrameAt(0, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 0%
+    cx.addKeyFrameAt(0.25, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
+    cx.addKeyFrameAt(0.5, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
+    cx.addKeyFrameAt(0.75, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
+    cx.addKeyFrameAt(1, 60); // 100%
 
-    Animation spinner(duration, delay, iterationCount, direction, fillMode);
-    AnimateTransform transform(from, to);
-
-    while(spinner.running())
-    {
-        Transform value = transform.valueAt(spinner.progress());
-        // do something useful with the value
-    }
+    AnimateNumber cy;
+    cy.addKeyFrameAt(0, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 0%
+    cy.addKeyFrameAt(0.25, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
+    cy.addKeyFrameAt(0.5, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
+    cy.addKeyFrameAt(0.75, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
+    cy.addKeyFrameAt(1, 10); // 100%
 
     return 0;
 }
 ```
+
+Output :
+
+<p align="center">
+  <img src="https://github.com/sammycage/juno/blob/main/hello.gif">
+</p>
 
 ## Features
 
