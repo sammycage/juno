@@ -20,14 +20,14 @@ int main()
     x.addKeyFrameAt(0.25, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
     x.addKeyFrameAt(0.5, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
     x.addKeyFrameAt(0.75, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
-    x.addKeyFrameAt(1, 60, nullptr); // 100%
+    x.addKeyFrameAt(1, 60); // 100%
 
     AnimateNumber y;
     y.addKeyFrameAt(0, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 0%
     y.addKeyFrameAt(0.25, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
     y.addKeyFrameAt(0.5, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
     y.addKeyFrameAt(0.75, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
-    y.addKeyFrameAt(1, 10, nullptr); // 100%
+    y.addKeyFrameAt(1, 10); // 100%
 
     while(animation.running())
     {
