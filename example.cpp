@@ -7,17 +7,34 @@ using namespace juno;
 
 int main()
 {
-    double duration = 5;
-    double delay = 2;
-    double iterationCount = 2;
-    Direction direction = Direction::Reverse;
-    FillMode fillMode = FillMode::None;
+    double duration = 3;
+    double delay = 0;
+    double iterationCount = 3;
+    Direction direction = Direction::Alternate;
+    FillMode fillMode = FillMode::Freeze;
+    TimingFunction timingFunction = CubicBezierTiming::ease();
+    Animation animation(duration, delay, iterationCount, direction, fillMode, timingFunction);
 
-    Animation animation(duration, delay, iterationCount, direction, fillMode);
+    AnimateNumber x;
+    x.addKeyFrameAt(0, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 0%
+    x.addKeyFrameAt(0.25, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
+    x.addKeyFrameAt(0.5, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
+    x.addKeyFrameAt(0.75, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
+    x.addKeyFrameAt(1, 60, nullptr); // 100%
+
+    AnimateNumber y;
+    y.addKeyFrameAt(0, 10, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 0%
+    y.addKeyFrameAt(0.25, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 25%
+    y.addKeyFrameAt(0.5, 110, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 50%
+    y.addKeyFrameAt(0.75, 60, CubicBezierTiming::create(0.5, 0, 0.5, 1)); // 75%
+    y.addKeyFrameAt(1, 10, nullptr); // 100%
+
     while(animation.running())
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(125));
-        std::cout << animation.progress() << std::endl;
+        auto currentTime = animation.currentTime();
+        auto progress = animation.progressAt(currentTime);
+        std::cout << "At " << currentTime << 's' << " x is " << x.valueAt(progress) << " and y is " << y.valueAt(progress) << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(25));
     }
 
     return 0;
